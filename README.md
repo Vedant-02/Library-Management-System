@@ -65,17 +65,14 @@ UPDATE books_issue
 SET fine_paid = TRUE, payment_transaction_id = 'TXN123'
 WHERE issue_id = 1;
 ```
-### 2. Return a Book and Calculate Fine
-```sql
-UPDATE books_issue
-SET current_fine = DATEDIFF(CURDATE(), return_on) * (SELECT fine_per_day FROM settings)
-WHERE issue_id = 1 AND CURDATE() > return_on;
 
-UPDATE books_issue
-SET fine_paid = TRUE, payment_transaction_id = 'TXN123'
-WHERE issue_id = 1;
-```
 ### 3. Retrieve Total Outstanding Fines for a Reader
+```sql
+SELECT book_issue_count_per_reader, fine_per_day, book_return_in_days
+FROM settings;
+
+```
+### 4. Retrieve System Settings
 ```sql
 SELECT book_issue_count_per_reader, fine_per_day, book_return_in_days
 FROM settings;

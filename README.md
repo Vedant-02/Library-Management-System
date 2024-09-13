@@ -1,129 +1,90 @@
-# Library Management System - SQL Schema
+# Library Management System (SQL Schema)
 
-This repository contains the SQL code to create the schema and tables required for a Library Management System. The system manages user login details, books, authors, publishers, library staff, readers, book issues, and system settings.
+## Project Overview
+This project implements a SQL-based Library Management System that manages the following key entities:
+- Users (Library staff, readers)
+- Books (including authors and publishers)
+- Book issue/return tracking
+- Fines and system-wide settings
 
-## Schema Overview
+The system is designed to handle the basic functionality of a library, such as user registration, book management, book issuing, returns, and fine calculation.
 
-- **Schema Name**: `library_management`
+## Database Schema
+
+The following tables are implemented in this system:
+1. **user_login**: Stores user login information, including their personal details.
+2. **publisher**: Holds information about publishers and their releases.
+3. **author**: Stores author details and publication count.
+4. **books**: Contains book information, including author, publisher, availability, and version details.
+5. **staff**: Records information about library staff and their work shifts.
+6. **readers**: Tracks library readers, books issued to them, and their fines.
+7. **books_issue**: Manages the issuing and returning of books, along with fine details.
+8. **settings**: Holds system-wide settings for book issue limits, fine rates, and return periods.
+
+## Basic Features
+
+### 1. User Management
+- Users (staff, readers) can be added with personal and login details.
   
-The schema includes tables to handle user authentication, library book management, book issues, and staff and reader details, along with the system settings for managing fines and book returns.
+### 2. Book Management
+- Information about books, their authors, publishers, and versions are stored in the system.
+- Books can be made available or unavailable for issue.
 
-## Tables
+### 3. Book Issue and Return
+- Books can be issued to readers and their return date is tracked.
+- Automated fine calculation based on the delay in return is implemented.
 
-### 1. `user_login`
-Stores information related to users who can log into the system.
+### 4. Fine Calculation
+- Fines are calculated based on the number of overdue days and system settings.
+- Readers can be charged for overdue books, and the fines can be paid and recorded.
 
-| Column Name      | Data Type | Description                 |
-|------------------|-----------|-----------------------------|
-| `user_id`        | `TEXT`    | Primary key (User's unique ID) |
-| `user_password`  | `TEXT`    | User's login password         |
-| `first_name`     | `TEXT`    | User's first name             |
-| `last_name`      | `TEXT`    | User's last name              |
-| `sign_up_on`     | `DATE`    | Date of account creation      |
-| `email_id`       | `TEXT`    | User's email address          |
+### 5. System Settings
+- System administrators can manage global settings such as:
+  - Maximum number of books a reader can issue.
+  - Fine per day for overdue books.
+  - Standard book return period (in days).
 
----
+## Database Queries Implemented
 
-### 2. `publisher`
-Stores information about book publishers and their distributors.
+### 1. Issue a Book
+```sql
+INSERT INTO books_issue (book_id, issued_to, issued_on, return_on)
+VALUES ('book1', 'reader1', CURDATE(), DATE_ADD(CURDATE(), INTERVAL 14 DAY));
 
-| Column Name       | Data Type | Description                   |
-|-------------------|-----------|-------------------------------|
-| `publisher_id`     | `TEXT`    | Primary key (Unique publisher ID) |
-| `publisher`        | `TEXT`    | Name of the publisher           |
-| `distributor`      | `TEXT`    | Distributor for the publisher   |
-| `releases_count`   | `INT`     | Total number of book releases   |
-| `last_release`     | `DATE`    | Date of the last book release   |
+UPDATE readers
+SET books_issued_current = books_issued_current + 1
+WHERE reader_id = 'reader1';
+```
+### 2. Return a Book and Calculate Fine
+```sql
+UPDATE books_issue
+SET current_fine = DATEDIFF(CURDATE(), return_on) * (SELECT fine_per_day FROM settings)
+WHERE issue_id = 1 AND CURDATE() > return_on;
 
----
+UPDATE books_issue
+SET fine_paid = TRUE, payment_transaction_id = 'TXN123'
+WHERE issue_id = 1;
+```
+### 2. Return a Book and Calculate Fine
+```sql
+UPDATE books_issue
+SET current_fine = DATEDIFF(CURDATE(), return_on) * (SELECT fine_per_day FROM settings)
+WHERE issue_id = 1 AND CURDATE() > return_on;
 
-### 3. `author`
-Stores details about authors of books.
+UPDATE books_issue
+SET fine_paid = TRUE, payment_transaction_id = 'TXN123'
+WHERE issue_id = 1;
+```
+### 3. Retrieve Total Outstanding Fines for a Reader
+```sql
+SELECT book_issue_count_per_reader, fine_per_day, book_return_in_days
+FROM settings;
 
-| Column Name         | Data Type | Description                   |
-|---------------------|-----------|-------------------------------|
-| `author_id`         | `TEXT`    | Primary key (Unique author ID) |
-| `first_name`        | `TEXT`    | Author's first name            |
-| `last_name`         | `TEXT`    | Author's last name             |
-| `publications_count`| `INT`     | Total number of publications   |
+```
 
----
+### 5. Update System Settings
+```sql
+UPDATE settings
+SET fine_per_day = 2.50;  -- Change fine per day to $2.50
 
-### 4. `books`
-Stores information about the books available in the library.
-
-| Column Name       | Data Type | Description                          |
-|-------------------|-----------|--------------------------------------|
-| `book_id`         | `TEXT`    | Primary key (Unique book ID)         |
-| `book_code`       | `TEXT`    | Unique code for the book             |
-| `book_name`       | `TEXT`    | Title of the book                    |
-| `author_id`       | `TEXT`    | Foreign key referencing `author_id`  |
-| `publisher_id`    | `TEXT`    | Foreign key referencing `publisher_id` |
-| `book_version`    | `TEXT`    | Version or edition of the book       |
-| `release_date`    | `DATE`    | Date the book was released           |
-| `available_from`  | `DATE`    | Date from which the book is available|
-| `is_available`    | `BOOLEAN` | Whether the book is available for issue |
-
----
-
-### 5. `staff`
-Stores details about the library's staff members.
-
-| Column Name         | Data Type | Description                     |
-|---------------------|-----------|---------------------------------|
-| `staff_id`          | `TEXT`    | Primary key (Unique staff ID)    |
-| `first_name`        | `TEXT`    | Staff member's first name       |
-| `last_name`         | `TEXT`    | Staff member's last name        |
-| `staff_role`        | `TEXT`    | Staff role (e.g., librarian)    |
-| `start_date`        | `DATE`    | Date the staff member started   |
-| `last_date`         | `DATE`    | Date the staff member left      |
-| `is_active`         | `BOOLEAN` | Whether the staff member is active |
-| `work_shift_start`  | `TIME`    | Shift start time                |
-| `work_shift_end`    | `TIME`    | Shift end time                  |
-
----
-
-### 6. `readers`
-Stores information about registered readers in the library.
-
-| Column Name         | Data Type | Description                       |
-|---------------------|-----------|-----------------------------------|
-| `reader_id`         | `TEXT`    | Primary key (Unique reader ID)    |
-| `first_name`        | `TEXT`    | Reader's first name               |
-| `last_name`         | `TEXT`    | Reader's last name                |
-| `registered_on`     | `DATE`    | Date the reader registered        |
-| `books_issued_total`| `INT`     | Total number of books issued      |
-| `books_issued_current`| `INT`   | Number of books currently issued  |
-| `is_issued`         | `BOOLEAN` | Whether the reader currently has books issued |
-| `last_issue_date`   | `DATE`    | Last book issue date              |
-| `total_fine`        | `FLOAT`   | Total fine owed by the reader     |
-| `current_fine`      | `FLOAT`   | Current outstanding fine          |
-
----
-
-### 7. `books_issue`
-Tracks the issue of books to readers.
-
-| Column Name             | Data Type | Description                         |
-|-------------------------|-----------|-------------------------------------|
-| `issue_id`              | `SERIAL`  | Primary key (Auto-incremented)      |
-| `book_id`               | `TEXT`    | Foreign key referencing `books`     |
-| `issued_to`             | `TEXT`    | Foreign key referencing `readers`   |
-| `issued_on`             | `DATE`    | Date the book was issued            |
-| `return_on`             | `DATE`    | Due date for returning the book     |
-| `current_fine`          | `FLOAT`   | Current fine owed on this book      |
-| `fine_paid`             | `BOOLEAN` | Whether the fine has been paid      |
-| `payment_transaction_id`| `TEXT`    | Transaction ID for the fine payment |
-
----
-
-### 8. `settings`
-Stores system-wide settings like book issue limits and fine rates.
-
-| Column Name                   | Data Type | Description                         |
-|-------------------------------|-----------|-------------------------------------|
-| `book_issue_count_per_reader`  | `INT`     | Maximum books a reader can issue    |
-| `fine_per_day`                 | `FLOAT`   | Fine charged per day of late return |
-| `book_return_in_days`          | `INT`     | Number of days before a book must be returned |
-
----
+```
